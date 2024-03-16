@@ -1,0 +1,5 @@
+# dependencies for our python project
+pandas
+numpy
+scipy
+
