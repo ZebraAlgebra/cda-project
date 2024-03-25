@@ -1,43 +1,39 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[71]:
-
-
+import pandas as pd
+import numpy as np
 import json
 
-import numpy as np
-import pandas as pd
+books = pd.read_csv('Books.csv', sep=';')
+ratings = pd.read_csv('Ratings.csv', sep=';')
+users = pd.read_csv('Users.csv', sep=';')
+genres = pd.read_json('goodreads_book_genres_initial.json', lines=True)
 
-books = pd.read_csv("Books.csv", sep=";")
-ratings = pd.read_csv("Ratings.csv", sep=";")
-users = pd.read_csv("Users.csv", sep=";")
-genres = pd.read_json("goodreads_book_genres_initial.json", lines=True)
+df = pd.read_json('goodreads_books.json', lines=True, chunksize = 10000)
+book_ids = pd.DataFrame()
 
-# df = pd.read_json('goodreads_books.json', lines=True, chunksize = 10000)
-# book_ids = pd.DataFrame()
+i = 0
 
-# i = 0
+for chunk in df:
+    book_ids = pd.concat([book_ids, chunk[['book_id','isbn']]])
+    i += 1
+    print(i)
 
-# for chunk in df:
-#     book_ids = pd.concat([book_ids, chunk[['book_id','isbn']]])
-#     i += 1
-#     print(i)
-
-genres = genres.merge(
-    book_ids[["book_id", "isbn"]],
-    left_on="book_id",
-    right_on="book_id",
-    suffixes=(False, True),
-)
-books = genres.merge(books, left_on="isbn", right_on="ISBN")
-books = books[
-    ["book_id", "ISBN", "genres", "Title", "Author", "Year", "Publisher"]
-].rename(columns={"book_id": "Book_Id", "genres": "Genres"})
+genres = genres.merge(book_ids[['book_id', 'isbn']], left_on='book_id', right_on='book_id', suffixes=(False, True))
+books = genres.merge(books, left_on='isbn', right_on='ISBN')
+books = books[['book_id','ISBN','genres','Title','Author','Year','Publisher']].rename(columns={'book_id': 'Book_Id','genres': 'Genres'})
 
 display(genres)
 display(books)
 display(ratings)
+
+rg = ratings.merge(non_fiction_books, left_on='ISBN', right_on='ISBN')
+rg = rg.merge(fiction_books, left_on='ISBN', right_on='ISBN')
+rg = rg.merge(mystery_books, left_on='ISBN', right_on='ISBN')
+rg = rg.merge(children_books, left_on='ISBN', right_on='ISBN')
+ug = users.merge(rg, left_on='User-ID', right_on='User-ID')
+uga = ug[['User-ID', 'Age','Rating']].groupby(['User-ID', 'Age']).mean().rename(columns={'Rating':'Average Rating'})
+ugg = ug[['User-ID', 'Age','non-fiction','fiction', 'children','mystery, thriller, crime']].groupby(['User-ID', 'Age']).sum()
+users = ugg.merge(uga, left_on='User-ID', right_on='User-ID')
+
 display(users)
 
 
